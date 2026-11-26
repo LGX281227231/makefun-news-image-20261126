@@ -1,122 +1,155 @@
-"""Draw entry.png: a clean newspaper front page summing up
-Thursday 26 November 2026 in five stories. Run locally with PIL;
-the entry itself only ships the finished PNG (see main.py).
+"""Front page for Thursday 26 November 2026, drawn with Pillow.
+
+Layout, top to bottom: a navy masthead with the paper name and the
+date, a dateline, five numbered stories (colour badge, kicker, headline,
+two-line standfirst), an ALSO TODAY box, and a footer line. Run this file
+locally to regenerate entry.png; the submitted program (main.py) only
+copies the finished PNG to the output directory.
 """
+
 from PIL import Image, ImageDraw, ImageFont
 
-W, H = 1024, 1024
-BG = (255, 255, 255)
+PAGE_W, PAGE_H = 1024, 1024
+MARGIN = 40
+RIGHT = PAGE_W - MARGIN
+
+PAPER = (255, 255, 255)
 NAVY = (15, 42, 68)
 RED = (178, 34, 34)
 INK = (20, 20, 20)
-GREY = (90, 90, 90)
+MUTED = (90, 90, 90)
+BODY = (60, 60, 60)
 RULE = (210, 210, 210)
+PANEL = (240, 244, 248)
+GOLD = (255, 210, 80)
 
-FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-FONT_REG = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-
-
-def font(path, size):
-    return ImageFont.truetype(path, size)
+BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+REGULAR = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 
-def wrap(draw, text, fnt, max_w):
+def load(bold, size):
+    return ImageFont.truetype(BOLD if bold else REGULAR, size)
+
+
+def wrap_text(draw, text, fnt, width):
+    """Split text into lines that fit width, word by word."""
     words = text.split()
-    lines, cur = [], ""
-    for w in words:
-        trial = (cur + " " + w).strip()
-        if draw.textlength(trial, font=fnt) <= max_w:
-            cur = trial
+    lines = []
+    line = ""
+    for word in words:
+        nxt = f"{line} {word}".strip()
+        if draw.textlength(nxt, font=fnt) <= width:
+            line = nxt
         else:
-            if cur:
-                lines.append(cur)
-            cur = w
-    if cur:
-        lines.append(cur)
+            lines.append(line)
+            line = word
+    if line:
+        lines.append(line)
     return lines
 
 
 STORIES = [
-    ("1", (178, 34, 34), "UNITED STATES  /  TRADE",
-     "US proposes new tariffs; China hit hardest",
-     "Washington moves against what it calls structural excess industrial capacity; "
-     "India faces a 17% rate and Brazil 10% on aircraft."),
-    ("2", (15, 42, 68), "UNITED STATES",
-     "Macy\u2019s parade postponed for first time by storm",
-     "The 100th parade moves to Saturday as a nor\u2019easter brings high winds "
-     "and heavy rain to New York City."),
-    ("3", (0, 110, 80), "NORTH KOREA",
-     "Kim orders wider rollout of tactical nuclear weapons",
-     "Kim Jong Un inspects warheads in a rare public display and dismisses "
-     "Trump\u2019s offer to resume talks."),
-    ("4", (150, 90, 0), "EGYPT",
-     "Fuel tanker fire on Cairo ring road kills at least 30",
-     "A tanker overturns and catches fire in Giza; at least 30 dead and 15 injured, "
-     "the Health Ministry says."),
-    ("5", (70, 70, 160), "SPACE  /  PAKISTAN",
-     "Pakistan\u2019s first astronaut boards Tiangong",
-     "The first Pakistani in orbit becomes the first foreign astronaut to visit "
-     "the Tiangong space station."),
+    dict(
+        color=(178, 34, 34),
+        kicker="UNITED STATES  /  TRADE",
+        headline="US proposes new tariffs; China hit hardest",
+        stand="Washington moves against what it calls structural excess industrial "
+              "capacity; India faces a 17% rate and Brazil 10% on aircraft.",
+    ),
+    dict(
+        color=(15, 42, 68),
+        kicker="UNITED STATES",
+        headline="Macy\u2019s parade postponed for first time by storm",
+        stand="The 100th parade moves to Saturday as a nor\u2019easter brings high "
+              "winds and heavy rain to New York City.",
+    ),
+    dict(
+        color=(0, 110, 80),
+        kicker="NORTH KOREA",
+        headline="Kim orders wider rollout of tactical nuclear weapons",
+        stand="Kim Jong Un inspects warheads in a rare public display and "
+              "dismisses Trump\u2019s offer to resume talks.",
+    ),
+    dict(
+        color=(150, 90, 0),
+        kicker="EGYPT",
+        headline="Fuel tanker fire on Cairo ring road kills at least 30",
+        stand="A tanker overturns and catches fire in Giza; at least 30 dead and "
+              "15 injured, the Health Ministry says.",
+    ),
+    dict(
+        color=(70, 70, 160),
+        kicker="SPACE  /  PAKISTAN",
+        headline="Pakistan\u2019s first astronaut boards Tiangong",
+        stand="The first Pakistani in orbit becomes the first foreign astronaut "
+              "to visit the Tiangong space station.",
+    ),
+]
+
+ALSO = [
+    "Australia and Solomon Islands sign a security pact; no foreign bases allowed.",
+    "Duran Duran guitarist Andy Taylor dies at 65.",
+    "Russia\u2019s Murmansk governor detained in a corruption probe; Putin fires him.",
 ]
 
 
-def main():
-    img = Image.new("RGB", (W, H), BG)
-    d = ImageDraw.Draw(img)
-    x0, x1 = 40, 984
+def masthead(draw):
+    draw.rectangle([MARGIN, 28, RIGHT, 112], fill=NAVY)
+    draw.text((MARGIN + 20, 44), "WORLD NEWS", font=load(True, 52), fill=PAPER)
+    draw.text((RIGHT - 20, 62), "26 NOV 2026", font=load(True, 30), fill=GOLD, anchor="ra")
+    draw.text((MARGIN, 128), "THURSDAY  26  NOVEMBER  2026", font=load(True, 30), fill=NAVY)
+    draw.text((MARGIN, 168), "The day in five stories \u2014 from Washington to Tiangong",
+              font=load(False, 22), fill=MUTED)
+    draw.line([MARGIN, 200, RIGHT, 200], fill=RED, width=4)
 
-    # Masthead
-    d.rectangle([x0, 28, x1, 112], fill=NAVY)
-    d.text((x0 + 20, 44), "WORLD NEWS", font=font(FONT_BOLD, 52), fill=(255, 255, 255))
-    d.text((x1 - 20, 62), "26 NOV 2026", font=font(FONT_BOLD, 30), fill=(255, 210, 80), anchor="ra")
-    # Date line
-    d.text((x0, 128), "THURSDAY  26  NOVEMBER  2026", font=font(FONT_BOLD, 30), fill=NAVY)
-    d.text((x0, 168), "The day in five stories \u2014 from Washington to Tiangong",
-           font=font(FONT_REG, 22), fill=GREY)
-    d.line([x0, 200, x1, 200], fill=RED, width=4)
 
-    y = 222
-    for num, color, tag, head, body in STORIES:
-        # Number badge
-        d.rounded_rectangle([x0, y, x0 + 54, y + 54], radius=10, fill=color)
-        d.text((x0 + 27, y + 26), num, font=font(FONT_BOLD, 30), fill=(255, 255, 255), anchor="mm")
-        tx = x0 + 74
-        tw = x1 - tx
-        d.text((tx, y + 2), tag, font=font(FONT_BOLD, 17), fill=color)
-        hl = wrap(d, head, font(FONT_BOLD, 27), tw)
-        hy = y + 24
-        for line in hl:
-            d.text((tx, hy), line, font=font(FONT_BOLD, 27), fill=INK)
-            hy += 32
-        bl = wrap(d, body, font(FONT_REG, 20), tw)
-        by = hy + 4
-        for line in bl:
-            d.text((tx, by), line, font=font(FONT_REG, 20), fill=(60, 60, 60))
-            by += 25
-        y = by + 12
-        if num != "5":
-            d.line([x0, y - 8, x1, y - 8], fill=RULE, width=2)
+def story(draw, index, item, y):
+    """Draw one numbered story; return the y where the next block starts."""
+    color = item["color"]
+    draw.rounded_rectangle([MARGIN, y, MARGIN + 54, y + 54], radius=10, fill=color)
+    draw.text((MARGIN + 27, y + 26), str(index), font=load(True, 30), fill=PAPER, anchor="mm")
+    tx = MARGIN + 74
+    width = RIGHT - tx
+    draw.text((tx, y + 2), item["kicker"], font=load(True, 17), fill=color)
+    head = wrap_text(draw, item["headline"], load(True, 27), width)
+    hy = y + 24
+    for ln in head:
+        draw.text((tx, hy), ln, font=load(True, 27), fill=INK)
+        hy += 32
+    stand = wrap_text(draw, item["stand"], load(False, 20), width)
+    by = hy + 4
+    for ln in stand:
+        draw.text((tx, by), ln, font=load(False, 20), fill=BODY)
+        by += 25
+    return by + 12
 
-    # Also today strip (fills the page, adds breadth)
-    d.rounded_rectangle([x0, y + 2, x1, y + 104], radius=10, fill=(240, 244, 248))
-    d.text((x0 + 16, y + 12), "ALSO TODAY", font=font(FONT_BOLD, 18), fill=NAVY)
-    also = [
-        "Australia and Solomon Islands sign a security pact; no foreign bases allowed.",
-        "Duran Duran guitarist Andy Taylor dies at 65.",
-        "Russia\u2019s Murmansk governor detained in a corruption probe; Putin fires him.",
-    ]
+
+def also_today(draw, y):
+    draw.rounded_rectangle([MARGIN, y + 2, RIGHT, y + 104], radius=10, fill=PANEL)
+    draw.text((MARGIN + 16, y + 12), "ALSO TODAY", font=load(True, 18), fill=NAVY)
     ay = y + 38
-    for line in also:
-        d.text((x0 + 16, ay), "\u2022  " + line, font=font(FONT_REG, 18), fill=(50, 50, 50))
+    for item in ALSO:
+        draw.text((MARGIN + 16, ay), "\u2022  " + item, font=load(False, 18), fill=(50, 50, 50))
         ay += 24
 
-    # Footer
-    d.line([x0, 968, x1, 968], fill=RULE, width=2)
-    d.text((x0, 978), "Headlines as reported on 26 November 2026",
-           font=font(FONT_REG, 18), fill=GREY)
+
+def build():
+    img = Image.new("RGB", (PAGE_W, PAGE_H), PAPER)
+    draw = ImageDraw.Draw(img)
+    masthead(draw)
+    y = 222
+    for i, item in enumerate(STORIES, start=1):
+        y = story(draw, i, item, y)
+        if i < len(STORIES):
+            # Divider sits 10px below the standfirst (story() adds 12, we go back 2).
+            draw.line([MARGIN, y - 2, RIGHT, y - 2], fill=RULE, width=2)
+    also_today(draw, y)
+    draw.line([MARGIN, 968, RIGHT, 968], fill=RULE, width=2)
+    draw.text((MARGIN, 978), "Headlines as reported on 26 November 2026",
+              font=load(False, 18), fill=MUTED)
     img.save("entry.png", optimize=True)
     print("saved entry.png", img.size)
 
 
 if __name__ == "__main__":
-    main()
+    build()

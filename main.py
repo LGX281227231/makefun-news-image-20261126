@@ -1,19 +1,26 @@
 """make.fun news-image-20261126 entry (Python 3.13, standard library only).
 
-The image is entry.png beside this file, drawn by draw.py from the
-headlines reported on Thursday 26 November 2026: US tariffs, the
-postponed Macy's parade, Kim's nuclear order, the Cairo tanker fire,
-and Pakistan's first astronaut. The grader runs this program with no
-network, so it only copies the image to /output.
+Copies the pre-drawn front page (entry.png, drawn by draw.py from the
+headlines of Thursday 26 November 2026) to the grader's output
+directory. No network, no extra dependencies; the same bytes every run.
 """
 
 import os
 import shutil
+from pathlib import Path
 
-src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "entry.png")
-out = os.path.join(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"), "entry.png")
-# Deterministic: the same bytes are copied on every run, twice in grading.
-if not os.path.isfile(src):
-    raise SystemExit("entry.png missing from repository")
-os.makedirs(os.path.dirname(out), exist_ok=True)
-shutil.copyfile(src, out)
+
+def main():
+    here = Path(__file__).resolve().parent
+    src = here / "entry.png"
+    if not src.is_file():
+        raise SystemExit("entry.png missing from repository")
+    # /output is the grader's directory; local runs can point elsewhere.
+    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # Deterministic: the same bytes are copied on every run, twice in grading.
+    shutil.copyfile(src, out_dir / "entry.png")
+
+
+if __name__ == "__main__":
+    main()
